@@ -1,7 +1,10 @@
+import os
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
 
-TOKEN = '7615655095:AAEfqRg5b2F6WCs8Hiab7_q4TTGyBcRFWzA'
+
+TOKEN = os.environ.get('ALMUERZIN8OR_KEY')
+
 MENU_ITEMS = {
     '🥃': 0,
     '☕': 0,
@@ -39,6 +42,7 @@ MENU_TEXT = {
 def create_action_keyboard():
     keyboard = [[InlineKeyboardButton('➕', callback_data='plus'), InlineKeyboardButton('➖', callback_data='minus')]]
     return InlineKeyboardMarkup(keyboard)
+
 def create_product_keyboard():
     keyboard = []
     row = []
