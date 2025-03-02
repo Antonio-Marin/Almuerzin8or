@@ -1,7 +1,7 @@
 import os
+import random
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler
-
+from telegram.ext import Application, CommandHandler, CallbackContext, CallbackQueryHandler, MessageHandler, filters
 
 TOKEN = os.environ.get('ALMUERZIN8OR_KEY')
 
@@ -190,6 +190,23 @@ async def button_callback(update: Update, context: CallbackContext):
             reply_markup=create_product_keyboard()
         )
 
+    import random
+
+async def text_handler(update: Update, context: CallbackContext):
+    user_message = update.message.text.lower()
+
+    if "bocata lomo ya" in user_message:
+        respuestas = [
+            "No queda... Se comió el último el monje",
+            "Llegaste tarde... el monje se ha zampado el último 😭",
+            "Lo siento, el monje no deja ni las migas 😡",
+            "¡Bocata de lomo agotado! Se lo llevó el monje...",
+            "¿Un bocata de lomo? JAJA, el monje lo pidió antes que tú.",
+        ]
+
+        await update.message.reply_text(random.choice(respuestas))
+        await update.message.reply_photo("https://pbs.twimg.com/media/Gdn_-3wWkAEQENt.jpg")
+
 #Ejecución
 if __name__ == '__main__':
     application = Application.builder().token(TOKEN).build()
@@ -198,4 +215,6 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler("guia", guide_command))
     application.add_handler(CommandHandler("pedido", order_command))
     application.add_handler(CallbackQueryHandler(button_callback))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler)) 
+
     application.run_polling()
