@@ -181,16 +181,24 @@ async def button_callback(update: Update, context: CallbackContext):
 
         if action == 'plus':
             MENU_ITEMS[selected_action] += 1
-        elif action == 'minus' and MENU_ITEMS[selected_action] > 0:
-            MENU_ITEMS[selected_action] -= 1
+        elif action == 'minus':
+            if MENU_ITEMS[selected_action] > 0:
+                MENU_ITEMS[selected_action] -= 1
+            else:
+                print("El usuario ha intenrtado eliminar un producto que se ecnuentra a 0 en el pedido")
+                return
 
+        # Generar resumen del pedido
         order_summary = create_order_summary()
-        await query.edit_message_text(
-            text=f"{order_summary}\nElige otro producto o vuelve:",
-            reply_markup=create_product_keyboard()
-        )
 
-    import random
+        try:
+            await query.edit_message_text(
+                text=f"{order_summary}\nElige otro producto o vuelve:",
+                reply_markup=create_product_keyboard()
+            )
+        except Exception as e:
+            print(f"Error al actualizar el mensaje: {e}")
+
 
 async def text_handler(update: Update, context: CallbackContext):
     user_message = update.message.text.lower()
