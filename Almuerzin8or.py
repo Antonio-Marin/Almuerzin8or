@@ -38,10 +38,25 @@ MENU_TEXT = {
     '🥬': 'Sándwich vegetal'
 }
 
+COMBOS = {
+    '🥃+🍅': ['🥃', '🍅'],
+    '🥃+🐷': ['🥃', '🐷'],
+    '☕+🍅': ['☕', '🍅'],
+    '☕+🥐': ['☕', '🥐'],
+    '☕+🥪': ['☕', '🥪'],
+    '☕+🥬': ['☕', '🥬'],
+    '☕+🥚': ['☕', '🥚'],
+    '☕+🐷': ['☕', '🐷']
+}
+
 #Métodos
 def create_action_keyboard():
-    keyboard = [[InlineKeyboardButton('➕', callback_data='plus'), InlineKeyboardButton('➖', callback_data='minus')]]
+    keyboard = [
+        [InlineKeyboardButton('➕', callback_data='plus'), InlineKeyboardButton('➖', callback_data='minus')],
+        [InlineKeyboardButton('🍽️ Combos', callback_data='combos')] 
+    ]
     return InlineKeyboardMarkup(keyboard)
+
 
 def create_product_keyboard():
     keyboard = []
@@ -56,6 +71,22 @@ def create_product_keyboard():
     if row:
         keyboard.append(row)
 
+    keyboard.append([InlineKeyboardButton('↩️​', callback_data='back'), InlineKeyboardButton('❌', callback_data='delete')])
+
+    return InlineKeyboardMarkup(keyboard)
+
+def create_combo_keyboard():
+    keyboard = []
+    row = []
+    for combo_name in COMBOS.keys():
+        row.append(InlineKeyboardButton(combo_name, callback_data=f"combo_{combo_name}"))
+        if len(row) == 2:
+            keyboard.append(row)
+            row = []
+
+    if row:
+        keyboard.append(row)
+    
     keyboard.append([InlineKeyboardButton('↩️​', callback_data='back'), InlineKeyboardButton('❌', callback_data='delete')])
 
     return InlineKeyboardMarkup(keyboard)
@@ -91,7 +122,8 @@ async def guide_command(update, context: CallbackContext):
     await update.message.reply_text(
     'A la hora de empezar tu pedido se te mostrarán dos emoticonos:\n'
     '   - Si pulsas ➕, los siguientes productos que selecciones se irán sumando a tu pedido.\n'
-    '   - Si pulsas ➖, los productos que selecciones se irán restando de tu pedido actual.\n\n'
+    '   - Si pulsas ➖, los productos que selecciones se irán restando de tu pedido actual.\n'
+    '   - Si pulsas "🍽️ Combos", se mostraran combos de productos para añadirlos a tu pedido actual.\n\n'
     'También tienes otras opciones importantes:\n'
     '   - ↩️: te permitirá cambiar entre añadir o eliminar productos.\n'
     '   - ❌: borrará todo el pedido actual si deseas comenzar desde cero.\n\n'
@@ -102,7 +134,6 @@ async def order_command(update: Update, context: CallbackContext):
         text="¿Qué deseas hacer?",
         reply_markup=create_action_keyboard()
     )
-
 
 async def button_callback(update: Update, context: CallbackContext):
     query = update.callback_query
@@ -117,15 +148,30 @@ async def button_callback(update: Update, context: CallbackContext):
             text=f"{order_summary}\nElige un producto:",
             reply_markup=create_product_keyboard()
         )
+    elif selected_action == 'combos':
+        await query.edit_message_text(
+            text=f"{order_summary}\nSelecciona un combo:",
+            reply_markup=create_combo_keyboard()
+        )
+    elif selected_action.startswith('combo_'):
+        combo_name = selected_action.replace('combo_', '')  # Extraer el nombre del combo
+        if combo_name in COMBOS:
+            for item in COMBOS[combo_name]:
+                MENU_ITEMS[item] += 1  # Añadir los productos del combo al pedido
+
+        order_summary = create_order_summary()
+        await query.edit_message_text(
+            text=f"{order_summary}\nCombo añadido. ¿Deseas agregar algo más?",
+            reply_markup=create_combo_keyboard()
+        )
     elif selected_action == 'back':
         await query.edit_message_text(
             text=f"{order_summary}\n¿Qué deseas hacer?",
             reply_markup=create_action_keyboard()
         )
     elif selected_action == 'delete':
-        # Eliminar todo el pedido
         clean_menu_count()
-        order_summary = create_order_summary()  # Actualiza después de eliminar
+        order_summary = create_order_summary()  # Actualizar el pedido
         await query.edit_message_text(
             text=f"{order_summary}\nTu pedido ha sido eliminado.\n¿Deseas hacer algo más?",
             reply_markup=create_action_keyboard()
@@ -143,7 +189,6 @@ async def button_callback(update: Update, context: CallbackContext):
             text=f"{order_summary}\nElige otro producto o vuelve:",
             reply_markup=create_product_keyboard()
         )
-
 
 #Ejecución
 if __name__ == '__main__':
