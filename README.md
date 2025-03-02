@@ -7,3 +7,8 @@ Para crear la imagen de **Almuerzin8or**, ejecuta el siguiente comando en el dir
 
 ```bash
 docker build -t almuerzin8or .
+```
+El bot tiene su token de Telegram oculto por seguridad. Para ejecutarlo, proporciona tu token:
+
+```bash
+docker run -d --name almuerzin8or -e ALMUERZIN8OR_KEY="TOKEN" almuerzin8or
