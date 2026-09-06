@@ -72,6 +72,7 @@ def create_product_keyboard():
         keyboard.append(row)
 
     keyboard.append([InlineKeyboardButton('↩️​', callback_data='back'), InlineKeyboardButton('❌', callback_data='delete')])
+    keyboard.append([InlineKeyboardButton('✅', callback_data='confirm')])
 
     return InlineKeyboardMarkup(keyboard)
 
@@ -88,6 +89,7 @@ def create_combo_keyboard():
         keyboard.append(row)
     
     keyboard.append([InlineKeyboardButton('↩️​', callback_data='back'), InlineKeyboardButton('❌', callback_data='delete')])
+    keyboard.append([InlineKeyboardButton('✅', callback_data='confirm')])
 
     return InlineKeyboardMarkup(keyboard)
 
@@ -99,6 +101,19 @@ def create_order_summary():
         if count > 0:
             order_summary += f"{item} {MENU_TEXT.get(item, '')}: {count}\n"
     
+    return order_summary
+
+def create_confirmed_order_summary():
+    order_summary = "📋 PEDIDO CONFIRMADO\n\n"
+
+    for item in MENU_ITEMS:
+        count = MENU_ITEMS[item]
+
+        if count > 0:
+            order_summary += f"{item} {MENU_TEXT.get(item, '')}: {count}\n"
+
+    order_summary += "\nSi deseas editar el pedido, pulsa el lápiz ✏️"
+
     return order_summary
 
 def clean_menu_count():
@@ -130,6 +145,7 @@ async def guide_command(update, context: CallbackContext):
     '¡Sigue las instrucciones y disfruta organizando tu pedido!')
 
 async def order_command(update: Update, context: CallbackContext):
+    clean_menu_count()
     sent_message = await update.message.reply_text(
         text="¿Qué deseas hacer?",
         reply_markup=create_action_keyboard()
@@ -169,11 +185,44 @@ async def button_callback(update: Update, context: CallbackContext):
             text=f"{order_summary}\n¿Qué deseas hacer?",
             reply_markup=create_action_keyboard()
         )
+    elif selected_action == 'confirm':
+        if not any(MENU_ITEMS.values()):
+            await query.edit_message_text(
+                text="🥲 Vaya... pues yo creo que os vais a quedar con hambre.",
+            )
+            return
+
+        order_summary = create_confirmed_order_summary()
+
+        await query.edit_message_text(
+            text=order_summary,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton('✏️', callback_data='edit')]
+            ])
+        )
     elif selected_action == 'delete':
+        await query.edit_message_text(
+            text="⚠️ ¿Seguro que quieres eliminar el pedido?",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton('✅', callback_data='confirm_delete'),
+                    InlineKeyboardButton('↩️', callback_data='cancel_delete')
+                ]
+            ])
+        )
+    elif selected_action == 'confirm_delete':
         clean_menu_count()
-        order_summary = create_order_summary()  # Actualizar el pedido
+        order_summary = create_order_summary()
+
         await query.edit_message_text(
             text=f"{order_summary}\nTu pedido ha sido eliminado.\n¿Deseas hacer algo más?",
+            reply_markup=create_action_keyboard()
+        )
+    elif selected_action == 'cancel_delete':
+        order_summary = create_order_summary()
+
+        await query.edit_message_text(
+            text=f"{order_summary}\nContinúa con tu pedido:",
             reply_markup=create_action_keyboard()
         )
     elif selected_action in MENU_ITEMS:
@@ -185,7 +234,6 @@ async def button_callback(update: Update, context: CallbackContext):
             if MENU_ITEMS[selected_action] > 0:
                 MENU_ITEMS[selected_action] -= 1
             else:
-                print("El usuario ha intenrtado eliminar un producto que se ecnuentra a 0 en el pedido")
                 return
 
         # Generar resumen del pedido
@@ -223,6 +271,6 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler("guia", guide_command))
     application.add_handler(CommandHandler("pedido", order_command))
     application.add_handler(CallbackQueryHandler(button_callback))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler)) 
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
     application.run_polling()
