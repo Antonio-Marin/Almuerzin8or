@@ -21,6 +21,9 @@ MENU_ITEMS = {
     '🥪': 0,
     '🥬': 0,
 }
+
+ORDERS = {}
+
 MENU_TEXT = {
     '🥃': 'Cortado',
     '☕': 'Café con leche',
@@ -121,11 +124,13 @@ def clean_menu_count(order):
     for item in order:
         order[item] = 0
 
-def get_user_order(context):
-    if 'order' not in context.user_data:
-        context.user_data['order'] = {item: 0 for item in MENU_ITEMS}
+def get_chat_order(update):
+    chat_id = update.effective_chat.id
 
-    return context.user_data['order']
+    if chat_id not in ORDERS:
+        ORDERS[chat_id] = {item: 0 for item in MENU_ITEMS}
+
+    return ORDERS[chat_id]
 
 #Comandos
 async def start_command(update, context: CallbackContext):
@@ -151,7 +156,7 @@ async def guide_command(update, context: CallbackContext):
     '¡Sigue las instrucciones y disfruta organizando tu pedido!')
 
 async def order_command(update: Update, context: CallbackContext):
-    order = get_user_order(context)
+    order = get_chat_order(update)
     clean_menu_count(order)
 
     await update.message.reply_text(
@@ -182,7 +187,7 @@ async def button_callback(update: Update, context: CallbackContext):
     await query.answer()
 
     selected_action = query.data
-    order = get_user_order(context)
+    order = get_chat_order(update)
     order_summary = create_order_summary(order)
 
     if selected_action == 'plus' or selected_action == 'minus':
