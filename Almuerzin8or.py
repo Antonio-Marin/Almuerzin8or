@@ -93,21 +93,22 @@ def create_combo_keyboard():
 
     return InlineKeyboardMarkup(keyboard)
 
-def create_order_summary():
+def create_order_summary(order):
     order_summary = "Tu pedido actual:\n"
-    menu = list(MENU_ITEMS.keys())
-    for item in menu:
-        count = MENU_ITEMS[item]
+
+    for item in order:
+        count = order[item]
+
         if count > 0:
             order_summary += f"{item} {MENU_TEXT.get(item, '')}: {count}\n"
-    
+
     return order_summary
 
-def create_confirmed_order_summary():
+def create_confirmed_order_summary(order):
     order_summary = "📋 PEDIDO CONFIRMADO\n\n"
 
-    for item in MENU_ITEMS:
-        count = MENU_ITEMS[item]
+    for item in order:
+        count = order[item]
 
         if count > 0:
             order_summary += f"{item} {MENU_TEXT.get(item, '')}: {count}\n"
@@ -116,13 +117,18 @@ def create_confirmed_order_summary():
 
     return order_summary
 
-def clean_menu_count():
-    for item in MENU_ITEMS:
-        MENU_ITEMS[item] = 0
+def clean_menu_count(order):
+    for item in order:
+        order[item] = 0
+
+def get_user_order(context):
+    if 'order' not in context.user_data:
+        context.user_data['order'] = {item: 0 for item in MENU_ITEMS}
+
+    return context.user_data['order']
 
 #Comandos
 async def start_command(update, context: CallbackContext):
-    clean_menu_count()
     await update.message.reply_text(
     '¡Hola! Soy tu bot de pedidos de almuerzo. Usa /leyenda para ver el menú y /pedido para hacer tu pedido. '
     'Si tienes alguna duda, utiliza /guia para ver cómo funciona el proceso de pedido.')
@@ -145,9 +151,29 @@ async def guide_command(update, context: CallbackContext):
     '¡Sigue las instrucciones y disfruta organizando tu pedido!')
 
 async def order_command(update: Update, context: CallbackContext):
-    clean_menu_count()
-    sent_message = await update.message.reply_text(
+    order = get_user_order(context)
+    clean_menu_count(order)
+
+    await update.message.reply_text(
         text="¿Qué deseas hacer?",
+        reply_markup=create_action_keyboard()
+    )
+
+async def edit_command(update: Update, context: CallbackContext):
+    confirmed_order = context.user_data.get('confirmed_order')
+
+    if not confirmed_order:
+        await update.message.reply_text(
+            "🥲 No tienes ningún pedido confirmado para editar."
+        )
+        return
+
+    context.user_data['order'] = confirmed_order.copy()
+
+    order_summary = create_order_summary(context.user_data['order'])
+
+    await update.message.reply_text(
+        text=f"✏️ EDITANDO PEDIDO\n\n{order_summary}\n¿Qué deseas modificar?",
         reply_markup=create_action_keyboard()
     )
 
@@ -156,7 +182,8 @@ async def button_callback(update: Update, context: CallbackContext):
     await query.answer()
 
     selected_action = query.data
-    order_summary = create_order_summary()
+    order = get_user_order(context)
+    order_summary = create_order_summary(order)
 
     if selected_action == 'plus' or selected_action == 'minus':
         context.user_data['action'] = selected_action
@@ -173,9 +200,9 @@ async def button_callback(update: Update, context: CallbackContext):
         combo_name = selected_action.replace('combo_', '')  # Extraer el nombre del combo
         if combo_name in COMBOS:
             for item in COMBOS[combo_name]:
-                MENU_ITEMS[item] += 1  # Añadir los productos del combo al pedido
+                order[item] += 1  # Añadir los productos del combo al pedido
 
-        order_summary = create_order_summary()
+        order_summary = create_order_summary(order)
         await query.edit_message_text(
             text=f"{order_summary}\nCombo añadido. ¿Deseas agregar algo más?",
             reply_markup=create_combo_keyboard()
@@ -186,13 +213,14 @@ async def button_callback(update: Update, context: CallbackContext):
             reply_markup=create_action_keyboard()
         )
     elif selected_action == 'confirm':
-        if not any(MENU_ITEMS.values()):
+        if not any(order.values()):
             await query.edit_message_text(
                 text="🥲 Vaya... pues yo creo que os vais a quedar con hambre.",
             )
             return
 
-        order_summary = create_confirmed_order_summary()
+        context.user_data['confirmed_order'] = order.copy()
+        order_summary = create_confirmed_order_summary(order)
 
         await query.edit_message_text(
             text=order_summary,
@@ -200,26 +228,43 @@ async def button_callback(update: Update, context: CallbackContext):
                 [InlineKeyboardButton('✏️', callback_data='edit')]
             ])
         )
+    elif selected_action == 'edit':
+        order = context.user_data.get('confirmed_order')
+
+        if not order:
+            await query.edit_message_text(
+                text="🥲 No encuentro ningún pedido para editar."
+            )
+            return
+
+        context.user_data['order'] = order.copy()
+
+        order_summary = create_order_summary(context.user_data['order'])
+
+        await query.edit_message_text(
+            text=f"✏️ EDITANDO PEDIDO\n\n{order_summary}\n¿Qué deseas modificar?",
+            reply_markup=create_action_keyboard()
+        )
     elif selected_action == 'delete':
         await query.edit_message_text(
             text="⚠️ ¿Seguro que quieres eliminar el pedido?",
             reply_markup=InlineKeyboardMarkup([
                 [
-                    InlineKeyboardButton('✅', callback_data='confirm_delete'),
-                    InlineKeyboardButton('↩️', callback_data='cancel_delete')
+                    InlineKeyboardButton('↩️', callback_data='cancel_delete'),
+                    InlineKeyboardButton('✅', callback_data='confirm_delete')
                 ]
             ])
         )
     elif selected_action == 'confirm_delete':
-        clean_menu_count()
-        order_summary = create_order_summary()
+        clean_menu_count(order)
+        order_summary = create_order_summary(order)
 
         await query.edit_message_text(
             text=f"{order_summary}\nTu pedido ha sido eliminado.\n¿Deseas hacer algo más?",
             reply_markup=create_action_keyboard()
         )
     elif selected_action == 'cancel_delete':
-        order_summary = create_order_summary()
+        order_summary = create_order_summary(order)
 
         await query.edit_message_text(
             text=f"{order_summary}\nContinúa con tu pedido:",
@@ -229,15 +274,15 @@ async def button_callback(update: Update, context: CallbackContext):
         action = context.user_data.get('action')
 
         if action == 'plus':
-            MENU_ITEMS[selected_action] += 1
+            order[selected_action] += 1
         elif action == 'minus':
-            if MENU_ITEMS[selected_action] > 0:
-                MENU_ITEMS[selected_action] -= 1
+            if order[selected_action] > 0:
+                order[selected_action] -= 1
             else:
                 return
 
         # Generar resumen del pedido
-        order_summary = create_order_summary()
+        order_summary = create_order_summary(order)
 
         try:
             await query.edit_message_text(
@@ -270,6 +315,7 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler("leyenda", legend_command))
     application.add_handler(CommandHandler("guia", guide_command))
     application.add_handler(CommandHandler("pedido", order_command))
+    application.add_handler(CommandHandler("edit", edit_command))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
