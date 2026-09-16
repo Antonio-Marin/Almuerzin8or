@@ -135,8 +135,14 @@ def get_chat_order(update):
 #Comandos
 async def start_command(update, context: CallbackContext):
     await update.message.reply_text(
-    '¡Hola! Soy tu bot de pedidos de almuerzo. Usa /leyenda para ver el menú y /pedido para hacer tu pedido. '
-    'Si tienes alguna duda, utiliza /guia para ver cómo funciona el proceso de pedido.')
+        '¡Hola! 👋 Soy Almuerzin8or, tu bot para organizar pedidos de almuerzo 🍽️\n\n'
+        '🥪 Usa /pedido para crear un pedido.\n'
+        '📋 Una vez terminado, podrás confirmarlo y editarlo si necesitas hacer cambios.\n'
+        '📖 Usa /leyenda para consultar el significado de los emojis del menú.\n'
+        '❓ Usa /guia para ver cómo funciona el proceso de pedido.\n\n'
+        '👥 En los grupos, todos compartís el mismo pedido, así que cualquiera puede añadir, quitar o editar productos.\n\n'
+        '¡Vamos a por ese almuerzo! 😋'
+    )
 
 async def legend_command(update, context: CallbackContext):
     legend = "Aquí tienes el significado de cada emoticono:\n"
@@ -144,16 +150,20 @@ async def legend_command(update, context: CallbackContext):
         legend += f"{emoji}: {description}\n"
     await update.message.reply_text(legend)
 
-async def guide_command(update, context: CallbackContext):
-    await update.message.reply_text(
-    'A la hora de empezar tu pedido se te mostrarán dos emoticonos:\n'
-    '   - Si pulsas ➕, los siguientes productos que selecciones se irán sumando a tu pedido.\n'
-    '   - Si pulsas ➖, los productos que selecciones se irán restando de tu pedido actual.\n'
-    '   - Si pulsas "🍽️ Combos", se mostraran combos de productos para añadirlos a tu pedido actual.\n\n'
-    'También tienes otras opciones importantes:\n'
-    '   - ↩️: te permitirá cambiar entre añadir o eliminar productos.\n'
-    '   - ❌: borrará todo el pedido actual si deseas comenzar desde cero.\n\n'
-    '¡Sigue las instrucciones y disfruta organizando tu pedido!')
+async def guide_command(update, context: CallbackContext): 
+    await update.message.reply_text( 
+        'A la hora de empezar tu pedido se te mostrarán varias opciones:\n'
+        ' - Si pulsas ➕, los productos que selecciones se irán sumando a tu pedido.\n'
+        ' - Si pulsas ➖, los productos que selecciones se irán restando de tu pedido actual.\n'
+        ' - Si pulsas "🍽️ Combos", podrás añadir combos de productos a tu pedido.\n'
+        ' - Si pulsas "✅", confirmarás tu pedido cuando hayas terminado.\n\n'
+        'También tienes otras opciones importantes:\n'
+        ' - ↩️: te permitirá volver al menú anterior.\n'
+        ' - ❌: te permitirá eliminar el pedido, pero tendrás que confirmarlo antes.\n'
+        ' - ✏️: te permitirá editar un pedido que ya hayas confirmado.\n\n'
+        'En los grupos, todos los usuarios comparten el mismo pedido, por lo que cualquiera puede añadir, quitar o editar productos.\n\n'
+        '¡Sigue las instrucciones y disfruta organizando tu pedido!' 
+        )
 
 async def order_command(update: Update, context: CallbackContext):
     order = get_chat_order(update)
