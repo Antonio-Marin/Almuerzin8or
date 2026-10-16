@@ -1,0 +1,24 @@
+import { api, db } from 'sdk';
+import { eq } from 'sdk/db';
+import { orders } from '../schema.js';
+import { changeOrder, readOrder } from '../lib/orders.js';
+import { transition } from '../lib/state.js';
+
+export default async function () {
+  const me = await api.getMe();
+  // Telegram has no chat with id 0. Never send a message during this check.
+  const chatId = 0;
+  if (await readOrder(chatId)) throw new Error('Existe un registro de prueba previo con chat_id=0. Revísalo antes de continuar.');
+  try {
+    await changeOrder(chatId, 'smoke:add', state => transition(state, 'plus:0'));
+    const duplicate = await changeOrder(chatId, 'smoke:add', state => transition(state, 'plus:0'));
+    if (!duplicate.duplicate) throw new Error('Falló la detección de duplicados');
+    await changeOrder(chatId, 'smoke:confirm', state => transition(state, 'confirm'));
+    const row = await readOrder(chatId);
+    if (row.state.confirmed['🥃'] !== 1) throw new Error('Falló la persistencia del pedido');
+    await changeOrder(chatId, 'smoke:edit', state => transition(state, 'edit'));
+    return { bot: me.username, botId: me.id, database: 'ok', deduplication: 'ok', sharedEdit: 'ok' };
+  } finally {
+    await db.delete(orders).where(eq(orders.chatId, chatId)).run();
+  }
+}

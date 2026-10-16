@@ -1,0 +1,9 @@
+# Local dependencies and credentials for both implementations.
+**/node_modules/
+**/.tgcloud/
+**/.env
+**/.env.*
+**/__pycache__/
+**/.venv/
+serverless/deployment-status.json
+serverless/tgcloud/endpoints/verifyDeployment.js

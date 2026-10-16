@@ -1,0 +1,14 @@
+{
+  "name": "almuerzin8or-serverless",
+  "private": true,
+  "devDependencies": {
+    "@tgcloud/cli": "^0.2.0"
+  },
+  "scripts": {
+    "deploy": "tgcloud push",
+    "status": "tgcloud status",
+    "run": "tgcloud run",
+    "test": "node --experimental-vm-modules --test"
+  },
+  "type": "module"
+}
